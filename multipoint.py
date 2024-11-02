@@ -5,9 +5,10 @@ from matplotlib import use as mpl_use
 
 mpl_use("Agg")  # Use non-interactive backend for Streamlit compatibility
 
-# Initialize or retrieve supports and loads list in session state
+# Initialize or retrieve supports and loads lists in session state
 if 'supports' not in st.session_state:
     st.session_state.supports = []  # Store supports persistently
+
 if 'loads' not in st.session_state:
     st.session_state.loads = []  # Store loads persistently
 
@@ -41,17 +42,15 @@ class Beam:
         return support_matrix
 
     def apply_loads(self):
-        # Clear point_load array
         self.point_load.fill(0)
-        # Add point loads based on session state
         for load in st.session_state.loads:
             position = load["position"]
             magnitude = load["magnitude"]
-            self.point_load[position, 0] += -magnitude  # Apply downward force
+            self.point_load[position, 0] += magnitude  # Accumulate loads at the same position
 
     def analysis(self):
+        self.apply_loads()  # Apply the loads
         self.support = self.apply_supports()  # Use the applied supports
-        self.apply_loads()  # Apply loads before analysis
         nn = len(self.node)
         ne = len(self.bar)
         n_dof = 2 * nn
@@ -83,11 +82,11 @@ class Beam:
             self.force[i] = np.dot(k, u_ele[i])
             self.displacement[i] = u_ele[i]
 
-    def plot(self, load_position):
+    def plot(self):
         fig, axs = plt.subplots(3, figsize=(10, 8))
         ne = len(self.bar)
 
-        # Run analysis with current load position (this is handled in apply_loads now)
+        # Run analysis (this uses the applied loads from the session state)
         self.analysis()
 
         for i in range(ne):
@@ -138,15 +137,18 @@ support_type = st.sidebar.selectbox("Select Support Type", ["Fixed", "Pinned"])
 support_position = st.sidebar.slider("Support Position", 0, segments, 0)
 add_support = st.sidebar.button("Add Support")
 
+st.sidebar.header("Load Conditions")
+load_position = st.sidebar.slider("Load Position", 0, segments, 0)
+load_magnitude = st.sidebar.number_input("Load Magnitude (N)", min_value=-1e6, value=-1000)
+add_load = st.sidebar.button("Add Load")
+
+# Initialize beam instance
+beam = Beam(E, I, length, segments)
+
 if add_support:
     # Add support to session state for persistence
     st.session_state.supports.append({"position": support_position, "type": support_type})
     st.sidebar.write(f"{support_type} support added at position {support_position}")
-
-st.sidebar.header("Load Conditions")
-load_position = st.sidebar.slider("Load Position", 0, segments, 0)
-load_magnitude = st.sidebar.number_input("Load Magnitude (N)", value=0.0)
-add_load = st.sidebar.button("Add Load")
 
 if add_load:
     # Add load to session state for persistence
@@ -164,5 +166,5 @@ for load in st.session_state.loads:
     st.sidebar.write(f"Load of {load['magnitude']} N at position {load['position']}")
 
 st.subheader("Beam Analysis Results")
-fig = beam.plot(load_position)
+fig = beam.plot()
 st.pyplot(fig)

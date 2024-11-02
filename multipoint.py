@@ -139,7 +139,7 @@ add_support = st.sidebar.button("Add Support")
 
 st.sidebar.header("Load Conditions")
 load_position = st.sidebar.slider("Load Position", 0, segments, 0)
-load_magnitude = st.sidebar.number_input("Load Magnitude (N)", min_value=-1e6, value=-1000)
+load_magnitude = st.sidebar.number_input("Load Magnitude (N)", min_value=-1e6, value=-1000.0)  # Changed to float
 add_load = st.sidebar.button("Add Load")
 
 # Initialize beam instance
